@@ -1,0 +1,5 @@
+# Python packages needed
+psutil          # CPU, RAM, disk monitoring
+pynvml          # NVIDIA GPU monitoring  
+torch           # CUDA device detection
+cpuinfo         # CPU information

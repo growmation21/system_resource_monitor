@@ -1,0 +1,236 @@
+# System Resource Monitor - Implementation Plan
+
+## Project Overview
+This implementation plan outlines the ordered development tasks to create a standalone system resource monitoring Chrome app based on the existing ComfyUI-Crystools monitoring feature. The app will run as a borderless window with real-time system monitoring capabilities.
+
+## Development Phases
+
+### Phase 1: Project Foundation and Setup (1-2 days)
+
+#### Task 1.1: Environment Setup and Dependencies
+- [ ] Create Python virtual environment for the project
+- [ ] Install core dependencies from `requirements.txt`:
+  - `psutil>=5.8.0` - System monitoring
+  - `py-cpuinfo>=8.0.0` - CPU information
+  - `pynvml>=11.4.1` - NVIDIA GPU monitoring
+  - `aiohttp>=3.8.0` - Web server framework
+  - `torch>=1.9.0` - CUDA detection (optional)
+- [ ] Set up TypeScript build environment if needed
+- [ ] Verify NVIDIA drivers and GPU detection capabilities
+
+#### Task 1.2: Project Structure Reorganization
+- [ ] Create main application entry point (`main.py`)
+- [ ] Set up logging configuration
+- [ ] Create configuration file structure for app settings
+- [ ] Establish Chrome app manifest and launcher structure
+
+#### Task 1.3: Core Server Framework
+- [ ] Implement basic aiohttp web server
+- [ ] Set up static file serving for frontend assets
+- [ ] Create WebSocket connection handler
+- [ ] Implement basic error handling and logging
+
+### Phase 2: Backend Hardware Monitoring (2-3 days)
+
+#### Task 2.1: Hardware Information Classes
+- [ ] **Priority: HIGH** - Review and adapt `back-end/hardware.py`
+  - Extract `CHardwareInfo` class from ComfyUI-Crystools
+  - Implement CPU monitoring via psutil
+  - Implement RAM monitoring via psutil
+  - Implement disk monitoring via psutil
+  - Add configuration toggles for each monitor type
+
+#### Task 2.2: GPU Monitoring Implementation
+- [ ] **Priority: HIGH** - Review and adapt `back-end/gpu.py`
+  - Extract `CGPUInfo` class from ComfyUI-Crystools
+  - Implement NVIDIA GPU detection via pynvml
+  - Add GPU utilization monitoring
+  - Add VRAM usage monitoring
+  - Add GPU temperature monitoring
+  - Support multiple GPU configurations
+
+#### Task 2.3: Hard Drive Monitoring
+- [ ] **Priority: MEDIUM** - Review and adapt `back-end/hdd.py`
+  - Implement disk drive enumeration
+  - Add per-drive usage monitoring
+  - Support multiple drive selection
+
+#### Task 2.4: Monitor Threading System
+- [ ] **Priority: HIGH** - Review and adapt `back-end/monitor.py`
+  - Extract `CMonitor` class from ComfyUI-Crystools
+  - Implement background monitoring thread
+  - Add configurable refresh rates (1-30 seconds)
+  - Implement thread-safe data collection
+  - Add proper thread lifecycle management
+
+### Phase 3: WebSocket Communication Layer (1-2 days)
+
+#### Task 3.1: API Endpoints Implementation
+- [ ] `PATCH /resources/monitor` - Global monitoring settings
+- [ ] `GET /resources/monitor/GPU` - GPU information retrieval
+- [ ] `PATCH /resources/monitor/GPU/{index}` - Per-GPU configuration
+- [ ] `GET /resources/monitor/HDD` - Available disk drives
+
+#### Task 3.2: Real-time Data Broadcasting
+- [ ] Implement WebSocket event system
+- [ ] Create `'resources.monitor'` event broadcasting
+- [ ] Add client connection management
+- [ ] Implement data serialization for hardware stats
+
+#### Task 3.3: Settings Persistence
+- [ ] Create settings storage system (JSON configuration)
+- [ ] Implement settings validation
+- [ ] Add settings change notification system
+
+### Phase 4: Frontend UI Development (3-4 days)
+
+#### Task 4.1: Core TypeScript Components
+- [ ] **Priority: HIGH** - Review and adapt `front-end/monitor.ts`
+  - Extract main monitor controller logic
+  - Implement settings management
+  - Add WebSocket client connection
+  - Create monitor enable/disable functionality
+
+#### Task 4.2: UI Rendering System
+- [ ] **Priority: HIGH** - Review and adapt `front-end/monitorUI.ts`
+  - Extract UI rendering logic
+  - Implement real-time progress bar updates
+  - Add hover tooltips with detailed information
+  - Create multi-GPU support in UI
+
+#### Task 4.3: Progress Bar Components
+- [ ] **Priority: MEDIUM** - Review and adapt progress bar files:
+  - `front-end/progressBarUIBase.ts` - Base progress bar class
+  - `front-end/progressBar.ts` - Core progress bar logic
+  - `front-end/progressBarUI.ts` - UI-specific progress bar implementation
+  - Implement color-coded indicators per specification
+
+#### Task 4.4: Styling and Visual Design
+- [ ] **Priority: MEDIUM** - Review and adapt `front-end/styles.ts`
+  - Extract color definitions and styling constants
+  - Implement temperature gradient colors (green to red)
+  - Define monitor type colors (CPU: green, RAM: dark green, etc.)
+- [ ] **Priority: MEDIUM** - Review and adapt `front-end/monitor.css`
+  - Extract CSS styling for monitor displays
+  - Implement responsive design for resizable window
+  - Add animations and transitions
+
+### Phase 5: Chrome App Integration (2-3 days)
+
+#### Task 5.1: Chrome App Manifest
+- [ ] Create `manifest.json` for Chrome app
+- [ ] Configure borderless window with title bar
+- [ ] Set up always-on-top mode
+- [ ] Enable window resizing and moving capabilities
+- [ ] Configure app permissions for system access
+
+#### Task 5.2: Desktop Integration
+- [ ] Create desktop launcher icon
+- [ ] Set up app installation process
+- [ ] Configure app startup behavior
+- [ ] Implement proper app shutdown handling
+
+#### Task 5.3: Window Management
+- [ ] Implement multi-monitor support
+- [ ] Add window position persistence
+- [ ] Create window size constraints
+- [ ] Add always-on-top toggle functionality
+
+### Phase 6: Configuration and Settings UI (1-2 days)
+
+#### Task 6.1: Settings Panel Implementation
+- [ ] Create settings dialog/panel
+- [ ] Add monitor enable/disable toggles
+- [ ] Implement refresh rate configuration (1-30 seconds)
+- [ ] Add monitor size configuration (width/height)
+- [ ] Create per-GPU monitoring toggles
+
+#### Task 6.2: Advanced Configuration
+- [ ] Add disk drive selection interface
+- [ ] Implement color scheme customization
+- [ ] Create position and layout options
+- [ ] Add performance optimization settings
+
+### Phase 7: Testing and Validation (2-3 days)
+
+#### Task 7.1: Unit Testing
+- [ ] Create tests for hardware monitoring classes
+- [ ] Test WebSocket communication
+- [ ] Validate data accuracy against system tools
+- [ ] Test multi-GPU scenarios
+
+#### Task 7.2: Integration Testing
+- [ ] Test Chrome app installation and launch
+- [ ] Validate UI responsiveness and accuracy
+- [ ] Test settings persistence
+- [ ] Verify multi-monitor window behavior
+
+#### Task 7.3: Performance Testing
+- [ ] Measure CPU overhead (target: <0.5%)
+- [ ] Monitor memory usage (target: <20MB)
+- [ ] Test with various refresh rates
+- [ ] Validate GPU monitoring accuracy
+
+#### Task 7.4: Platform Testing
+- [ ] Test on Windows 10/11
+- [ ] Validate NVIDIA GPU detection
+- [ ] Test window management features
+- [ ] Verify desktop integration
+
+### Phase 8: Documentation and Deployment (1 day)
+
+#### Task 8.1: User Documentation
+- [ ] Create installation guide
+- [ ] Write user manual for features
+- [ ] Document troubleshooting steps
+- [ ] Create configuration examples
+
+#### Task 8.2: Developer Documentation
+- [ ] Document API endpoints
+- [ ] Create code architecture documentation
+- [ ] Add inline code comments
+- [ ] Create extension/modification guide
+
+#### Task 8.3: Packaging and Distribution
+- [ ] Create installation package
+- [ ] Set up Chrome Web Store entry (if applicable)
+- [ ] Create portable application version
+- [ ] Test installation on clean systems
+
+## Risk Mitigation and Dependencies
+
+### Critical Dependencies
+1. **ComfyUI-Crystools Source Code** - Required for extracting existing implementation
+2. **NVIDIA GPU Drivers** - Essential for GPU monitoring features
+3. **Chrome App Platform** - Verify continued support for Chrome Apps
+
+### Technical Risks
+1. **Chrome App Deprecation** - Chrome Apps are deprecated; consider Electron alternative
+2. **GPU Detection Issues** - Not all systems have NVIDIA GPUs
+3. **Performance Impact** - Continuous monitoring could affect system performance
+4. **WebSocket Stability** - Real-time communication reliability
+
+### Recommended Alternatives
+- **Electron App** - More future-proof than Chrome Apps
+- **Progressive Web App (PWA)** - Modern web app with offline capabilities
+- **Native Desktop App** - Using frameworks like Tauri or Qt
+
+## Estimated Timeline
+- **Total Development Time**: 12-18 days
+- **Team Size**: 1-2 developers
+- **Critical Path**: Backend monitoring → WebSocket communication → Frontend UI
+
+## Success Criteria
+1. App launches from desktop icon without virtual environment
+2. Real-time monitoring displays CPU, RAM, GPU, VRAM, and temperature
+3. Window is always-on-top, resizable, and movable across monitors
+4. Monitoring data updates every 5 seconds (configurable)
+5. CPU overhead remains under 0.5%
+6. All settings persist between app restarts
+
+## Next Steps
+1. Set up development environment and dependencies
+2. Extract and review code from ComfyUI-Crystools project
+3. Begin Phase 1 implementation
+4. Establish weekly progress reviews
+5. Create testing protocols for each phase
