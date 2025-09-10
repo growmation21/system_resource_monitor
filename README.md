@@ -60,7 +60,7 @@ The requirements include:
 
 1. Clone this repository:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/system_resource_monitor.git
+   git clone https://github.com/growmation21/system_resource_monitor.git
    cd system_resource_monitor
    ```
 
