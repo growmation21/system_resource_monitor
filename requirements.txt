@@ -1,5 +1,12 @@
-# Python packages needed
-psutil          # CPU, RAM, disk monitoring
-pynvml          # NVIDIA GPU monitoring  
-torch           # CUDA device detection
-cpuinfo         # CPU information
+# Core system monitoring dependencies
+psutil>=5.8.0
+py-cpuinfo>=8.0.0
+
+# GPU monitoring (NVIDIA)
+pynvml>=11.4.1
+
+# PyTorch for CUDA detection (optional but recommended)
+torch>=1.9.0
+
+# Web framework dependencies
+aiohttp>=3.8.0
