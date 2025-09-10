@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Resource Monitor - Test Page</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #ffffff;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .card {
+            background-color: #2d2d2d;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        
+        .connected {
+            background-color: #2d5a2d;
+            color: #90ee90;
+        }
+        
+        .disconnected {
+            background-color: #5a2d2d;
+            color: #ff6b6b;
+        }
+        
+        button {
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background-color: #0052a3;
+        }
+        
+        .log {
+            background-color: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        
+        .log-entry {
+            margin: 2px 0;
+        }
+        
+        .timestamp {
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🖥️ System Resource Monitor - Test Page</h1>
+        
+        <div class="card">
+            <h2>WebSocket Connection</h2>
+            <div id="connectionStatus" class="status disconnected">
+                ❌ Disconnected
+            </div>
+            <button onclick="connectWebSocket()">Connect</button>
+            <button onclick="disconnectWebSocket()">Disconnect</button>
+            <button onclick="sendPing()">Send Ping</button>
+            <button onclick="getStatus()">Get Status</button>
+        </div>
+        
+        <div class="card">
+            <h2>Server Information</h2>
+            <div id="serverInfo">
+                <button onclick="loadServerInfo()">Load Server Info</button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>Message Log</h2>
+            <button onclick="clearLog()">Clear Log</button>
+            <div id="messageLog" class="log"></div>
+        </div>
+    </div>
+
+    <script>
+        let websocket = null;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+        
+        function log(message, type = 'info') {
+            const logElement = document.getElementById('messageLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `<span class="timestamp">[${timestamp}]</span> ${message}`;
+            logElement.appendChild(entry);
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        function updateConnectionStatus(connected) {
+            const statusElement = document.getElementById('connectionStatus');
+            if (connected) {
+                statusElement.className = 'status connected';
+                statusElement.textContent = '✅ Connected';
+                reconnectAttempts = 0;
+            } else {
+                statusElement.className = 'status disconnected';
+                statusElement.textContent = '❌ Disconnected';
+            }
+        }
+        
+        function connectWebSocket() {
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                log('Already connected to WebSocket');
+                return;
+            }
+            
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
+            
+            log(`Connecting to ${wsUrl}...`);
+            
+            websocket = new WebSocket(wsUrl);
+            
+            websocket.onopen = function(event) {
+                log('✅ WebSocket connected');
+                updateConnectionStatus(true);
+            };
+            
+            websocket.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    log(`📨 Received: ${JSON.stringify(data, null, 2)}`);
+                } catch (e) {
+                    log(`📨 Received (raw): ${event.data}`);
+                }
+            };
+            
+            websocket.onclose = function(event) {
+                log(`❌ WebSocket closed (code: ${event.code})`);
+                updateConnectionStatus(false);
+                
+                // Auto-reconnect
+                if (reconnectAttempts < maxReconnectAttempts) {
+                    reconnectAttempts++;
+                    log(`🔄 Attempting to reconnect (${reconnectAttempts}/${maxReconnectAttempts})...`);
+                    setTimeout(connectWebSocket, 2000);
+                }
+            };
+            
+            websocket.onerror = function(error) {
+                log(`❌ WebSocket error: ${error}`);
+                updateConnectionStatus(false);
+            };
+        }
+        
+        function disconnectWebSocket() {
+            if (websocket) {
+                websocket.close();
+                websocket = null;
+                log('🔌 WebSocket disconnected manually');
+                updateConnectionStatus(false);
+            }
+        }
+        
+        function sendPing() {
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                const message = {
+                    type: 'ping',
+                    timestamp: Date.now()
+                };
+                websocket.send(JSON.stringify(message));
+                log(`📤 Sent ping: ${JSON.stringify(message)}`);
+            } else {
+                log('❌ WebSocket not connected');
+            }
+        }
+        
+        function getStatus() {
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                const message = {
+                    type: 'get_status',
+                    timestamp: Date.now()
+                };
+                websocket.send(JSON.stringify(message));
+                log(`📤 Sent status request: ${JSON.stringify(message)}`);
+            } else {
+                log('❌ WebSocket not connected');
+            }
+        }
+        
+        async function loadServerInfo() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                const serverInfoElement = document.getElementById('serverInfo');
+                serverInfoElement.innerHTML = `
+                    <h3>Server Status</h3>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                
+                log('📊 Server info loaded');
+            } catch (error) {
+                log(`❌ Failed to load server info: ${error}`);
+            }
+        }
+        
+        function clearLog() {
+            document.getElementById('messageLog').innerHTML = '';
+        }
+        
+        // Auto-connect on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🚀 Test page loaded');
+            connectWebSocket();
+            loadServerInfo();
+        });
+    </script>
+</body>
+</html>

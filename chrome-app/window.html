@@ -107,6 +107,7 @@
                 this.statusElement = document.getElementById('status');
                 this.monitorsElement = document.getElementById('monitors');
                 this.isConnected = false;
+                this.reconnectInterval = null;
                 
                 this.init();
             }
@@ -122,9 +123,20 @@
                 
                 // Try to connect immediately
                 setTimeout(() => this.connect(), 1000);
+                
+                // Set up periodic reconnection attempts
+                this.reconnectInterval = setInterval(() => {
+                    if (!this.isConnected) {
+                        this.connect();
+                    }
+                }, 5000);
             }
             
             connect() {
+                if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+                    return; // Already connected
+                }
+                
                 try {
                     const wsUrl = this.backendUrl.replace('http', 'ws') + '/ws';
                     this.websocket = new WebSocket(wsUrl);
@@ -155,10 +167,16 @@
                 this.statusElement.className = 'status connected';
                 this.statusElement.innerHTML = '<div>✓ Connected to System Monitor</div>';
                 
+                // Request initial status
+                this.sendMessage({
+                    type: 'get_status'
+                });
+                
                 // Hide status and show monitors after a brief delay
                 setTimeout(() => {
                     this.statusElement.style.display = 'none';
                     this.monitorsElement.style.display = 'block';
+                    this.initializeMonitorDisplay();
                 }, 1000);
             }
             
@@ -171,9 +189,6 @@
                 `;
                 this.statusElement.style.display = 'block';
                 this.monitorsElement.style.display = 'none';
-                
-                // Try to reconnect
-                setTimeout(() => this.connect(), 3000);
             }
             
             onError(error) {
@@ -182,30 +197,92 @@
                 this.statusElement.innerHTML = `
                     <div>❌ Connection Error</div>
                     <div style="font-size: 10px;">Make sure Python backend is running</div>
+                    <div style="font-size: 10px;">python main.py</div>
                 `;
-                
-                // Try to reconnect
-                setTimeout(() => this.connect(), 5000);
             }
             
             onMessage(event) {
                 try {
                     const data = JSON.parse(event.data);
-                    this.updateMonitors(data);
+                    console.log('Received:', data);
+                    
+                    switch(data.type) {
+                        case 'connected':
+                            console.log('Server connection confirmed');
+                            break;
+                        case 'status':
+                            this.updateStatus(data.data);
+                            break;
+                        case 'monitor_data':
+                            this.updateMonitors(data.data);
+                            break;
+                        case 'pong':
+                            console.log('Pong received');
+                            break;
+                        default:
+                            console.log('Unknown message type:', data.type);
+                    }
                 } catch (error) {
                     console.error('Failed to parse message:', error);
                 }
             }
             
+            sendMessage(message) {
+                if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+                    this.websocket.send(JSON.stringify(message));
+                }
+            }
+            
+            updateStatus(statusData) {
+                console.log('Status update:', statusData);
+                // Status updates will be used when we implement hardware monitoring
+            }
+            
             updateMonitors(data) {
-                // This will be implemented when we receive real data
+                // This will be implemented when we receive real hardware data
                 console.log('Received monitor data:', data);
+            }
+            
+            initializeMonitorDisplay() {
+                // Create placeholder monitor display
+                this.monitorsElement.innerHTML = `
+                    <div style="text-align: center; padding: 20px;">
+                        <h3>🖥️ System Resource Monitor</h3>
+                        <p>Connected to backend server</p>
+                        <p style="font-size: 12px; color: #888;">
+                            Hardware monitoring will be implemented in Phase 2
+                        </p>
+                        <div style="margin-top: 20px;">
+                            <button onclick="systemMonitor.sendMessage({type: 'ping'})" 
+                                    style="background: #0066cc; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
+                                Test Connection
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            destroy() {
+                if (this.reconnectInterval) {
+                    clearInterval(this.reconnectInterval);
+                }
+                if (this.websocket) {
+                    this.websocket.close();
+                }
             }
         }
         
         // Initialize the monitor when the page loads
+        let systemMonitor;
         document.addEventListener('DOMContentLoaded', () => {
-            new SystemMonitor();
+            systemMonitor = new SystemMonitor();
+        });
+        
+        // Clean up on page unload
+        window.addEventListener('beforeunload', () => {
+            if (systemMonitor) {
+                systemMonitor.destroy();
+            }
         });
     </script>
 </body>
