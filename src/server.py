@@ -16,12 +16,19 @@ import aiohttp
 from aiohttp import web, WSMsgType
 import aiohttp_cors
 
+from .monitor import SystemMonitor
+
 class WebSocketManager:
     """Manages WebSocket connections for real-time data broadcasting"""
     
     def __init__(self, logger):
         self.logger = logger
         self._connections: Set[aiohttp.web.WebSocketResponse] = set()
+    
+    @property
+    def connection_count(self) -> int:
+        """Get the number of active connections"""
+        return len(self._connections)
     
     def add_connection(self, ws: aiohttp.web.WebSocketResponse):
         """Add a new WebSocket connection"""
@@ -80,6 +87,82 @@ class SystemMonitorServer:
         
         # Store project root for static files
         self.project_root = Path(__file__).parent.parent
+        
+        # Initialize system monitoring
+        try:
+            self.system_monitor = SystemMonitor(
+                enable_cpu=self.config.monitoring.enable_cpu,
+                enable_ram=self.config.monitoring.enable_ram,
+                enable_disk=self.config.monitoring.enable_disk,
+                enable_gpu=self.config.monitoring.enable_gpu,
+                enable_vram=self.config.monitoring.enable_vram,
+                enable_temperature=self.config.monitoring.enable_temperature,
+                selected_drives=self.config.monitoring.selected_drives,
+                logger=self.logger
+            )
+            self.logger.info("✅ System monitor initialized successfully")
+        except Exception as e:
+            self.logger.error(f"❌ Failed to initialize system monitor: {e}")
+            self.system_monitor = None
+        
+        # Monitoring task
+        self._monitoring_task = None
+    
+    def create_app(self) -> web.Application:
+        """Create and configure the aiohttp application"""
+        # Create the web application
+        app = web.Application()
+        
+        # Store references for handlers
+        app['config'] = self.config
+        app['logger'] = self.logger
+        app['ws_manager'] = self.ws_manager
+        
+        # Set up CORS
+        cors = aiohttp_cors.setup(app, defaults={
+            "*": aiohttp_cors.ResourceOptions(
+                allow_credentials=True,
+                expose_headers="*",
+                allow_headers="*",
+                allow_methods="*"
+            )
+        })
+        
+        # Add routes
+        self._setup_routes(app, cors)
+        
+        # Add middleware
+        app.middlewares.append(self._error_middleware)
+        app.middlewares.append(self._logging_middleware)
+        
+        return app
+    
+    async def _monitoring_loop(self):
+        """Background task for periodic system monitoring and broadcasting"""
+        self.logger.info("🔄 Starting monitoring loop")
+        
+        while True:
+            try:
+                if self.system_monitor and self.ws_manager.connection_count > 0:
+                    # Get system status
+                    status_data = self.system_monitor.get_full_status()
+                    
+                    # Broadcast to all connected WebSocket clients
+                    await self.ws_manager.broadcast({
+                        'type': 'monitoring_update',
+                        'data': status_data
+                    })
+                
+                # Wait for the configured interval
+                await asyncio.sleep(self.config.monitoring.update_interval)
+                
+            except asyncio.CancelledError:
+                self.logger.info("📡 Monitoring loop cancelled")
+                break
+            except Exception as e:
+                self.logger.error(f"Error in monitoring loop: {e}")
+                # Wait a bit before retrying on error
+                await asyncio.sleep(5)
     
     def create_app(self) -> web.Application:
         """Create and configure the aiohttp application"""
@@ -193,15 +276,35 @@ class SystemMonitorServer:
             }))
         
         elif message_type == 'get_status':
-            # This will be implemented when we add hardware monitoring
-            await ws.send_str(json.dumps({
-                'type': 'status',
-                'data': {
-                    'server': 'running',
-                    'connections': self.ws_manager.connection_count,
-                    'timestamp': asyncio.get_event_loop().time()
-                }
-            }))
+            # Get real system status data
+            if self.system_monitor:
+                try:
+                    system_status = self.system_monitor.get_full_status()
+                    await ws.send_str(json.dumps({
+                        'type': 'status',
+                        'data': system_status
+                    }))
+                except Exception as e:
+                    self.logger.error(f"Error getting system status: {e}")
+                    await ws.send_str(json.dumps({
+                        'type': 'status',
+                        'error': str(e),
+                        'data': {
+                            'server': 'running',
+                            'connections': self.ws_manager.connection_count,
+                            'timestamp': asyncio.get_event_loop().time()
+                        }
+                    }))
+            else:
+                await ws.send_str(json.dumps({
+                    'type': 'status',
+                    'data': {
+                        'server': 'running',
+                        'connections': self.ws_manager.connection_count,
+                        'timestamp': asyncio.get_event_loop().time(),
+                        'error': 'System monitoring not available'
+                    }
+                }))
         
         else:
             await ws.send_str(json.dumps({
@@ -211,6 +314,7 @@ class SystemMonitorServer:
     
     async def _status_handler(self, request: web.Request) -> web.Response:
         """Handle status API requests"""
+        # Get basic server status
         status = {
             'server': 'running',
             'version': '1.0.0',
@@ -222,6 +326,21 @@ class SystemMonitorServer:
             },
             'timestamp': asyncio.get_event_loop().time()
         }
+        
+        # Add system monitoring data if available
+        if self.system_monitor:
+            try:
+                system_status = self.system_monitor.get_full_status()
+                status.update(system_status)
+                
+                # Add monitoring capabilities
+                status['monitoring_capabilities'] = self.system_monitor.get_monitoring_capabilities()
+                
+            except Exception as e:
+                self.logger.error(f"Error getting system status for API: {e}")
+                status['monitoring_error'] = str(e)
+        else:
+            status['monitoring_error'] = 'System monitoring not initialized'
         
         return web.json_response(status)
     
@@ -359,6 +478,11 @@ class SystemMonitorServer:
             self.logger.info(f"🌐 Server started on http://{self.config.server.host}:{self.config.server.port}")
             self.logger.info(f"🔌 WebSocket endpoint: ws://{self.config.server.host}:{self.config.server.port}/ws")
             
+            # Start monitoring task if system monitor is available
+            if self.system_monitor:
+                self._monitoring_task = asyncio.create_task(self._monitoring_loop())
+                self.logger.info("📡 Monitoring task started")
+            
             # Auto-open browser if configured
             if self.config.app.auto_open_browser:
                 await self._open_browser()
@@ -381,12 +505,28 @@ class SystemMonitorServer:
         """Stop the web server"""
         self.logger.info("🛑 Stopping server...")
         
+        # Cancel monitoring task
+        if self._monitoring_task and not self._monitoring_task.done():
+            self._monitoring_task.cancel()
+            try:
+                await self._monitoring_task
+            except asyncio.CancelledError:
+                pass
+        
         # Close all WebSocket connections
         if self.ws_manager:
             await self.ws_manager.broadcast({
                 'type': 'server_shutdown',
                 'message': 'Server is shutting down'
             })
+        
+        # Clean up system monitor
+        if self.system_monitor:
+            try:
+                self.system_monitor.close()
+                self.logger.info("✅ System monitor closed")
+            except Exception as e:
+                self.logger.error(f"Error closing system monitor: {e}")
         
         # Stop server components
         if self.site:

@@ -105,3 +105,25 @@ def get_logger(name=None):
         name = 'system_monitor'
     
     return logging.getLogger(name)
+
+
+def setup_logger(config):
+    """
+    Set up logger with configuration
+    
+    Args:
+        config: LoggingConfig object
+        
+    Returns:
+        logging.Logger: Configured logger instance
+    """
+    log_dir = None
+    if hasattr(config, 'log_to_file') and config.log_to_file:
+        log_dir = Path(__file__).parent.parent / 'logs'
+    
+    return setup_logging(
+        level=getattr(logging, config.level.upper()),
+        log_dir=log_dir,
+        max_bytes=getattr(config, 'max_file_size', 10*1024*1024),
+        backup_count=getattr(config, 'backup_count', 5)
+    )

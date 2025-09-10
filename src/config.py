@@ -232,3 +232,16 @@ class Config:
             return False
         
         return True
+
+
+def load_config(config_path: Union[str, Path] = None) -> Config:
+    """
+    Load configuration from file or create default
+    
+    Args:
+        config_path: Path to configuration file (optional)
+        
+    Returns:
+        Config: Loaded configuration object
+    """
+    return Config(config_path)
