@@ -24,6 +24,7 @@ class ServerConfig:
 class MonitoringConfig:
     """Hardware monitoring configuration"""
     refresh_rate: float = 5.0  # seconds
+    update_interval: float = 5.0  # seconds (alias for refresh_rate)
     enable_cpu: bool = True
     enable_ram: bool = True
     enable_disk: bool = True
