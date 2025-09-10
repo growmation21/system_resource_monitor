@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Resource Monitor - Settings</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 20px;
+        }
+        
+        .title {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .subtitle {
+            font-size: 16px;
+            color: #cccccc;
+        }
+        
+        .settings-section {
+            background-color: #2a2a2a;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 20px;
+            border: 1px solid #444;
+        }
+        
+        .section-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 16px;
+            color: #4CAF50;
+            border-bottom: 1px solid #444;
+            padding-bottom: 8px;
+        }
+        
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #333;
+        }
+        
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+        
+        .setting-label {
+            flex: 1;
+            margin-right: 16px;
+        }
+        
+        .setting-name {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+        
+        .setting-description {
+            font-size: 12px;
+            color: #cccccc;
+        }
+        
+        .setting-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .form-control {
+            padding: 8px 12px;
+            border: 1px solid #555;
+            border-radius: 4px;
+            background-color: #333;
+            color: white;
+            font-size: 14px;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #666;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: #4CAF50;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 30px;
+            justify-content: center;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        
+        .btn-primary {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #45a049;
+        }
+        
+        .btn-secondary {
+            background-color: #666;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #555;
+        }
+        
+        .btn-danger {
+            background-color: #f44336;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background-color: #d32f2f;
+        }
+        
+        .status-message {
+            text-align: center;
+            padding: 12px;
+            border-radius: 4px;
+            margin-top: 16px;
+            display: none;
+        }
+        
+        .status-message.success {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        .status-message.error {
+            background-color: #f44336;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="title">System Resource Monitor</div>
+            <div class="subtitle">Configuration Settings</div>
+        </div>
+        
+        <!-- Backend Connection Settings -->
+        <div class="settings-section">
+            <div class="section-title">🔌 Backend Connection</div>
+            
+            <div class="setting-item">
+                <div class="setting-label">
+                    <div class="setting-name">Backend URL</div>
+                    <div class="setting-description">Address of the Python monitoring service</div>
+                </div>
+                <div class="setting-control">
+                    <input type="text" id="backendUrl" class="form-control" placeholder="http://localhost:8888" style="width: 200px;">
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <div class="setting-label">
+                    <div class="setting-name">Update Interval</div>
+                    <div class="setting-description">How often to refresh data (milliseconds)</div>
+                </div>
+                <div class="setting-control">
+                    <input type="number" id="updateInterval" class="form-control" min="1000" max="30000" step="1000" style="width: 100px;">
+                    <span>ms</span>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <div class="setting-label">
+                    <div class="setting-name">Auto-reconnect</div>
+                    <div class="setting-description">Automatically reconnect if connection is lost</div>
+                </div>
+                <div class="setting-control">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="autoReconnect" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Display Settings -->
+        <div class="settings-section">
+            <div class="section-title">🎨 Display Settings</div>
+            
+            <div class="setting-item">
+                <div class="setting-label">
+                    <div class="setting-name">Theme</div>
+                    <div class="setting-description">Choose interface color scheme</div>
+                </div>
+                <div class="setting-control">
+                    <select id="theme" class="form-control">
+                        <option value="dark">Dark</option>
+                        <option value="light">Light</option>
+                        <option value="auto">Auto (System)</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <div class="setting-label">
+                    <div class="setting-name">Window Size</div>
+                    <div class="setting-description">Default size for monitoring window</div>
+                </div>
+                <div class="setting-control">
+                    <select id="windowSize" class="form-control">
+                        <option value="small">Small (400x300)</option>
+                        <option value="medium">Medium (600x400)</option>
+                        <option value="large">Large (800x600)</option>
+                        <option value="custom">Custom</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <div class="setting-label">
+                    <div class="setting-name">Always on Top</div>
+                    <div class="setting-description">Keep monitoring window above other windows</div>
+                </div>
+                <div class="setting-control">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="alwaysOnTop">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Monitoring Settings -->
+        <div class="settings-section">
+            <div class="section-title">📊 Monitoring Settings</div>
+            
+            <div class="setting-item">
+                <div class="setting-label">
+                    <div class="setting-name">Enable CPU Monitoring</div>
+                    <div class="setting-description">Monitor CPU usage and performance</div>
+                </div>
+                <div class="setting-control">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="enableCPU" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <div class="setting-label">
+                    <div class="setting-name">Enable Memory Monitoring</div>
+                    <div class="setting-description">Monitor RAM usage and availability</div>
+                </div>
+                <div class="setting-control">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="enableMemory" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <div class="setting-label">
+                    <div class="setting-name">Enable Disk Monitoring</div>
+                    <div class="setting-description">Monitor disk usage for all drives</div>
+                </div>
+                <div class="setting-control">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="enableDisk" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <div class="setting-label">
+                    <div class="setting-name">Enable GPU Monitoring</div>
+                    <div class="setting-description">Monitor NVIDIA GPU usage and temperature</div>
+                </div>
+                <div class="setting-control">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="enableGPU" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Notification Settings -->
+        <div class="settings-section">
+            <div class="section-title">🔔 Notification Settings</div>
+            
+            <div class="setting-item">
+                <div class="setting-label">
+                    <div class="setting-name">Enable Notifications</div>
+                    <div class="setting-description">Show alerts for high resource usage</div>
+                </div>
+                <div class="setting-control">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="enableNotifications">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <div class="setting-label">
+                    <div class="setting-name">CPU Alert Threshold</div>
+                    <div class="setting-description">Alert when CPU usage exceeds this percentage</div>
+                </div>
+                <div class="setting-control">
+                    <input type="number" id="cpuThreshold" class="form-control" min="50" max="100" value="85" style="width: 80px;">
+                    <span>%</span>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <div class="setting-label">
+                    <div class="setting-name">Memory Alert Threshold</div>
+                    <div class="setting-description">Alert when memory usage exceeds this percentage</div>
+                </div>
+                <div class="setting-control">
+                    <input type="number" id="memoryThreshold" class="form-control" min="50" max="100" value="90" style="width: 80px;">
+                    <span>%</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="button-group">
+            <button class="btn btn-primary" id="saveSettings">💾 Save Settings</button>
+            <button class="btn btn-secondary" id="resetSettings">🔄 Reset to Defaults</button>
+            <button class="btn btn-secondary" id="testConnection">🔗 Test Connection</button>
+            <button class="btn btn-danger" id="clearData">🗑️ Clear All Data</button>
+        </div>
+        
+        <div class="status-message" id="statusMessage"></div>
+    </div>
+    
+    <script src="settings.js"></script>
+</body>
+</html>

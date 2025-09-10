@@ -204,6 +204,12 @@ class SystemMonitorServer:
         app.router.add_get('/api/config', self._config_handler)
         app.router.add_post('/api/config', self._update_config_handler)
         
+        # Resource monitoring endpoints (Task 3.1)
+        app.router.add_patch('/resources/monitor', self._update_monitor_settings_handler)
+        app.router.add_get('/resources/monitor/GPU', self._gpu_info_handler)
+        app.router.add_patch('/resources/monitor/GPU/{index}', self._update_gpu_settings_handler)
+        app.router.add_get('/resources/monitor/HDD', self._hdd_info_handler)
+        
         # Static file serving
         static_path = self.project_root / 'static'
         static_path.mkdir(exist_ok=True)
@@ -410,12 +416,305 @@ class SystemMonitorServer:
                             <li><a href="/chrome-app/window.html">Chrome App</a></li>
                             <li class="info">WebSocket: ws://{self.config.server.host}:{self.config.server.port}/ws</li>
                         </ul>
+                        <h3>Resource Monitoring API (Task 3.1):</h3>
+                        <ul>
+                            <li><a href="/resources/monitor/GPU">GPU Information</a></li>
+                            <li><a href="/resources/monitor/HDD">HDD Information</a></li>
+                            <li class="info">PATCH /resources/monitor - Update monitoring settings</li>
+                            <li class="info">PATCH /resources/monitor/GPU/{{index}} - Update GPU settings</li>
+                        </ul>
                     </div>
                 </div>
             </body>
             </html>
             """
             return web.Response(text=html, content_type='text/html')
+    
+    # ===== Task 3.1: Resource Monitoring API Endpoints =====
+    
+    async def _update_monitor_settings_handler(self, request: web.Request) -> web.Response:
+        """
+        PATCH /resources/monitor - Update global monitoring settings
+        
+        Expected JSON body:
+        {
+            "enable_cpu": true,
+            "enable_ram": true,
+            "enable_disk": true,
+            "enable_gpu": true,
+            "enable_vram": true,
+            "enable_temperature": true,
+            "update_interval": 5.0,
+            "selected_drives": ["C:\\", "D:\\"]
+        }
+        """
+        try:
+            data = await request.json()
+            
+            if not self.system_monitor:
+                return web.json_response({
+                    'success': False,
+                    'error': 'System monitoring not available'
+                }, status=503)
+            
+            # Validate settings
+            valid_keys = {
+                'enable_cpu', 'enable_ram', 'enable_disk', 'enable_gpu', 
+                'enable_vram', 'enable_temperature', 'update_interval', 'selected_drives'
+            }
+            
+            # Filter to only valid settings
+            settings = {k: v for k, v in data.items() if k in valid_keys}
+            
+            if not settings:
+                return web.json_response({
+                    'success': False,
+                    'error': 'No valid settings provided',
+                    'valid_keys': list(valid_keys)
+                }, status=400)
+            
+            # Update system monitor configuration
+            self.system_monitor.update_configuration(settings)
+            
+            # Update config object if needed
+            if 'update_interval' in settings:
+                self.config.monitoring.update_interval = settings['update_interval']
+                self.config.monitoring.refresh_rate = settings['update_interval']
+            
+            for key in ['enable_cpu', 'enable_ram', 'enable_disk', 'enable_gpu', 'enable_vram', 'enable_temperature']:
+                if key in settings:
+                    setattr(self.config.monitoring, key, settings[key])
+            
+            if 'selected_drives' in settings:
+                self.config.monitoring.selected_drives = settings['selected_drives']
+            
+            # Save configuration if requested
+            if data.get('save', True):
+                self.config.save()
+            
+            self.logger.info(f"Updated monitoring settings: {settings}")
+            
+            return web.json_response({
+                'success': True,
+                'message': 'Monitoring settings updated successfully',
+                'updated_settings': settings,
+                'current_config': {
+                    'enable_cpu': self.config.monitoring.enable_cpu,
+                    'enable_ram': self.config.monitoring.enable_ram,
+                    'enable_disk': self.config.monitoring.enable_disk,
+                    'enable_gpu': self.config.monitoring.enable_gpu,
+                    'enable_vram': self.config.monitoring.enable_vram,
+                    'enable_temperature': self.config.monitoring.enable_temperature,
+                    'update_interval': self.config.monitoring.update_interval,
+                    'selected_drives': self.config.monitoring.selected_drives
+                }
+            })
+            
+        except json.JSONDecodeError:
+            return web.json_response({
+                'success': False,
+                'error': 'Invalid JSON in request body'
+            }, status=400)
+        except Exception as e:
+            self.logger.error(f"Error updating monitor settings: {e}")
+            return web.json_response({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+    
+    async def _gpu_info_handler(self, request: web.Request) -> web.Response:
+        """
+        GET /resources/monitor/GPU - Get GPU information and current status
+        
+        Returns detailed GPU information including:
+        - Available GPUs with names and indices
+        - Current utilization, VRAM usage, temperature
+        - Capabilities (CUDA, PyTorch support)
+        """
+        try:
+            if not self.system_monitor or not self.system_monitor.gpu:
+                return web.json_response({
+                    'success': False,
+                    'error': 'GPU monitoring not available',
+                    'gpus': [],
+                    'gpu_count': 0,
+                    'capabilities': {
+                        'cuda_available': False,
+                        'torch_available': False,
+                        'pynvml_available': False
+                    }
+                })
+            
+            # Get comprehensive GPU status
+            gpu_status = self.system_monitor.gpu.get_status()
+            gpu_info = self.system_monitor.gpu.get_gpu_info()
+            
+            response_data = {
+                'success': True,
+                'gpu_count': gpu_info.get('gpu_count', 0),
+                'device_type': gpu_status.get('device_type', 'cpu'),
+                'capabilities': {
+                    'cuda_available': gpu_info.get('cuda_available', False),
+                    'torch_available': gpu_info.get('torch_available', False),
+                    'pynvml_available': gpu_info.get('pynvml_available', False)
+                },
+                'gpus': gpu_status.get('gpus', []),
+                'timestamp': gpu_status.get('timestamp', 0)
+            }
+            
+            return web.json_response(response_data)
+            
+        except Exception as e:
+            self.logger.error(f"Error getting GPU info: {e}")
+            return web.json_response({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+    
+    async def _update_gpu_settings_handler(self, request: web.Request) -> web.Response:
+        """
+        PATCH /resources/monitor/GPU/{index} - Update per-GPU monitoring settings
+        
+        Expected JSON body:
+        {
+            "enable_monitoring": true,
+            "enable_vram": true,
+            "enable_temperature": true
+        }
+        """
+        try:
+            gpu_index = int(request.match_info['index'])
+            data = await request.json()
+            
+            if not self.system_monitor or not self.system_monitor.gpu:
+                return web.json_response({
+                    'success': False,
+                    'error': 'GPU monitoring not available'
+                }, status=503)
+            
+            # Check if GPU index is valid
+            gpu_info = self.system_monitor.gpu.get_gpu_info()
+            if gpu_index >= gpu_info.get('gpu_count', 0):
+                return web.json_response({
+                    'success': False,
+                    'error': f'GPU index {gpu_index} not found. Available GPUs: 0-{gpu_info.get("gpu_count", 0)-1}'
+                }, status=404)
+            
+            # For now, we'll update global GPU settings since the current implementation
+            # doesn't support per-GPU configuration. This can be enhanced later.
+            valid_settings = {}
+            if 'enable_monitoring' in data:
+                valid_settings['enable_gpu'] = data['enable_monitoring']
+            if 'enable_vram' in data:
+                valid_settings['enable_vram'] = data['enable_vram']
+            if 'enable_temperature' in data:
+                valid_settings['enable_temperature'] = data['enable_temperature']
+            
+            if valid_settings:
+                self.system_monitor.update_configuration(valid_settings)
+                
+                # Update config
+                for key, value in valid_settings.items():
+                    setattr(self.config.monitoring, key, value)
+                
+                if data.get('save', True):
+                    self.config.save()
+            
+            self.logger.info(f"Updated GPU {gpu_index} settings: {valid_settings}")
+            
+            return web.json_response({
+                'success': True,
+                'message': f'GPU {gpu_index} settings updated successfully',
+                'gpu_index': gpu_index,
+                'updated_settings': valid_settings,
+                'note': 'Per-GPU settings currently apply globally to all GPUs'
+            })
+            
+        except ValueError:
+            return web.json_response({
+                'success': False,
+                'error': 'Invalid GPU index - must be a number'
+            }, status=400)
+        except json.JSONDecodeError:
+            return web.json_response({
+                'success': False,
+                'error': 'Invalid JSON in request body'
+            }, status=400)
+        except Exception as e:
+            self.logger.error(f"Error updating GPU {request.match_info.get('index', 'unknown')} settings: {e}")
+            return web.json_response({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+    
+    async def _hdd_info_handler(self, request: web.Request) -> web.Response:
+        """
+        GET /resources/monitor/HDD - Get available disk drives and current usage
+        
+        Returns:
+        - List of available disk drives/mount points
+        - Current usage for each drive
+        - Drive capabilities and filesystem information
+        """
+        try:
+            if not self.system_monitor:
+                return web.json_response({
+                    'success': False,
+                    'error': 'System monitoring not available',
+                    'drives': [],
+                    'available_drives': []
+                })
+            
+            # Get available drives
+            available_drives = self.system_monitor.get_available_drives()
+            
+            # Get current disk status
+            disk_status = self.system_monitor.hardware.get_disk_info() if self.system_monitor.hardware else {}
+            
+            # Compile drive information
+            drives_info = []
+            drives_data = disk_status.get('drives', {})
+            
+            for drive in available_drives:
+                drive_data = drives_data.get(drive, {})
+                drive_info = {
+                    'path': drive,
+                    'available': drive in drives_data,
+                    'total_bytes': drive_data.get('total_bytes', 0),
+                    'used_bytes': drive_data.get('used_bytes', 0),
+                    'free_bytes': drive_data.get('free_bytes', 0),
+                    'used_percent': drive_data.get('used_percent', 0),
+                    'filesystem': drive_data.get('filesystem', 'unknown'),
+                    'device': drive_data.get('device', 'unknown')
+                }
+                drives_info.append(drive_info)
+            
+            # Get monitoring configuration
+            current_config = {
+                'enable_disk': self.config.monitoring.enable_disk,
+                'selected_drives': self.config.monitoring.selected_drives,
+                'monitored_drives': disk_status.get('monitored_drives', [])
+            }
+            
+            response_data = {
+                'success': True,
+                'available_drives': available_drives,
+                'drives': drives_info,
+                'total_summary': disk_status.get('total', {}),
+                'monitoring_config': current_config,
+                'timestamp': disk_status.get('timestamp', 0)
+            }
+            
+            return web.json_response(response_data)
+            
+        except Exception as e:
+            self.logger.error(f"Error getting HDD info: {e}")
+            return web.json_response({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+    
+    # ===== End Task 3.1 Endpoints =====
     
     @web.middleware
     async def _error_middleware(self, request: web.Request, handler):

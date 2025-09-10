@@ -12,6 +12,8 @@
             color: #ffffff;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             overflow: hidden;
+            width: 100vw;
+            height: 100vh;
         }
         
         .container {
@@ -61,29 +63,86 @@
             height: 100%;
             padding: 10px;
             box-sizing: border-box;
+            overflow-y: auto;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .header h2 {
+            margin: 0;
+            color: #ffffff;
+            font-size: 16px;
+        }
+        
+        .settings-toggle {
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 3px;
+            transition: background-color 0.2s;
+        }
+        
+        .settings-toggle:hover {
+            background-color: #333;
         }
         
         .monitor-item {
-            margin: 5px 0;
+            margin: 8px 0;
+            padding: 8px;
+            border-radius: 5px;
+            background-color: rgba(255, 255, 255, 0.05);
+            transition: background-color 0.2s;
+        }
+        
+        .monitor-item:hover {
+            background-color: rgba(255, 255, 255, 0.1);
         }
         
         .monitor-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            margin-bottom: 4px;
+            color: #ffffff;
+        }
+        
+        .monitor-value {
+            font-weight: bold;
             font-size: 12px;
-            margin-bottom: 2px;
         }
         
         .progress-bar {
             width: 100%;
-            height: 20px;
+            height: 18px;
             background-color: #333;
             border-radius: 3px;
             overflow: hidden;
+            position: relative;
         }
         
         .progress-fill {
             height: 100%;
-            background-color: #0AA015;
-            transition: width 0.3s ease;
+            transition: width 300ms ease;
+            position: relative;
+        }
+        
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 10px;
+            font-weight: bold;
+            color: #ffffff;
+            text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.7);
+            z-index: 1;
         }
     </style>
 </head>
@@ -95,7 +154,14 @@
         </div>
         
         <div id="monitors" class="monitor-container">
-            <!-- Monitor displays will be populated here -->
+            <div class="header">
+                <h2>System Resource Monitor</h2>
+                <div class="settings-toggle" id="settings-toggle">⚙️</div>
+            </div>
+            
+            <div id="monitors-content">
+                <!-- Monitor displays will be populated here -->
+            </div>
         </div>
     </div>
 
@@ -106,8 +172,21 @@
                 this.websocket = null;
                 this.statusElement = document.getElementById('status');
                 this.monitorsElement = document.getElementById('monitors');
+                this.monitorsContent = document.getElementById('monitors-content');
                 this.isConnected = false;
                 this.reconnectInterval = null;
+                this.progressBars = new Map();
+                this.lastData = null;
+                this.settingsPanel = null;
+                
+                this.colors = {
+                    cpu: '#2196F3',      // Blue
+                    memory: '#4CAF50',   // Green
+                    disk: '#FF9800',     // Orange
+                    gpu: '#9C27B0',      // Purple
+                    vram: '#E91E63',     // Pink
+                    temperature: '#F44336' // Red
+                };
                 
                 this.init();
             }
@@ -139,6 +218,7 @@
                 
                 try {
                     const wsUrl = this.backendUrl.replace('http', 'ws') + '/ws';
+                    console.log('Connecting to:', wsUrl);
                     this.websocket = new WebSocket(wsUrl);
                     
                     this.websocket.onopen = () => {
@@ -206,6 +286,11 @@
                     const data = JSON.parse(event.data);
                     console.log('Received:', data);
                     
+                    // Store last data for settings panel
+                    if (data.data) {
+                        this.lastData = data.data;
+                    }
+                    
                     switch(data.type) {
                         case 'connected':
                             console.log('Server connection confirmed');
@@ -235,23 +320,17 @@
             
             updateStatus(statusData) {
                 console.log('Status update:', statusData);
-                // Status updates will be used when we implement hardware monitoring
             }
             
             updateMonitors(data) {
-                // This will be implemented when we receive real hardware data
                 console.log('Received monitor data:', data);
+                this.createMonitorDisplays(data);
             }
             
             initializeMonitorDisplay() {
-                // Create placeholder monitor display
-                this.monitorsElement.innerHTML = `
+                this.monitorsContent.innerHTML = `
                     <div style="text-align: center; padding: 20px;">
-                        <h3>🖥️ System Resource Monitor</h3>
-                        <p>Connected to backend server</p>
-                        <p style="font-size: 12px; color: #888;">
-                            Hardware monitoring will be implemented in Phase 2
-                        </p>
+                        <p>Waiting for hardware data...</p>
                         <div style="margin-top: 20px;">
                             <button onclick="systemMonitor.sendMessage({type: 'ping'})" 
                                     style="background: #0066cc; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
@@ -260,6 +339,135 @@
                         </div>
                     </div>
                 `;
+            }
+            
+            createMonitorDisplays(data) {
+                this.monitorsContent.innerHTML = ''; // Clear existing content
+                
+                // CPU Monitor
+                if (data.cpu) {
+                    this.createProgressBar('cpu', 'CPU Usage', data.cpu.usage, 100, '%', this.colors.cpu);
+                }
+                
+                // Memory Monitor
+                if (data.memory) {
+                    this.createProgressBar('memory', 'Memory Usage', data.memory.percent, 100, '%', this.colors.memory);
+                }
+                
+                // Disk Monitors
+                if (data.drives && data.drives.length > 0) {
+                    // Total disk usage
+                    let totalUsed = 0;
+                    let totalSpace = 0;
+                    
+                    data.drives.forEach(drive => {
+                        totalUsed += drive.used_bytes;
+                        totalSpace += drive.total_bytes;
+                    });
+                    
+                    const totalPercent = totalSpace > 0 ? (totalUsed / totalSpace) * 100 : 0;
+                    this.createProgressBar('disk-total', 'Total Disk Usage', totalPercent, 100, '%', this.colors.disk);
+                    
+                    // Individual drives
+                    data.drives.forEach((drive, index) => {
+                        const driveId = `disk-${drive.path.replace(/[^a-zA-Z0-9]/g, '_')}`;
+                        this.createProgressBar(driveId, `Drive ${drive.path}`, drive.used_percent, 100, '%', this.colors.disk);
+                    });
+                }
+                
+                // GPU Monitors
+                if (data.gpus && data.gpus.length > 0) {
+                    data.gpus.forEach((gpu, index) => {
+                        // GPU Utilization
+                        this.createProgressBar(`gpu-${index}`, `GPU ${index} (${gpu.name})`, gpu.gpu_utilization, 100, '%', this.colors.gpu);
+                        
+                        // VRAM Usage
+                        if (gpu.vram_total > 0) {
+                            this.createProgressBar(`vram-${index}`, `GPU ${index} VRAM`, gpu.vram_used_percent, 100, '%', this.colors.vram);
+                        }
+                        
+                        // Temperature
+                        if (gpu.gpu_temperature > 0) {
+                            this.createProgressBar(`temp-${index}`, `GPU ${index} Temp`, gpu.gpu_temperature, 90, '°C', this.colors.temperature);
+                        }
+                    });
+                }
+            }
+            
+            createProgressBar(id, label, value, max, unit, color) {
+                const percent = max > 0 ? Math.min((value / max) * 100, 100) : 0;
+                const displayValue = unit === 'bytes' ? this.formatBytes(value) : `${value.toFixed(1)}${unit}`;
+                const displayMax = unit === 'bytes' ? this.formatBytes(max) : `${max}${unit}`;
+                
+                const monitorItem = document.createElement('div');
+                monitorItem.className = 'monitor-item';
+                monitorItem.id = `monitor-${id}`;
+                
+                monitorItem.innerHTML = `
+                    <div class="monitor-label">
+                        <span>${label}</span>
+                        <span class="monitor-value">${displayValue} / ${displayMax}</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${percent}%; background-color: ${color};"></div>
+                        <div class="progress-text">${percent.toFixed(1)}%</div>
+                    </div>
+                `;
+                
+                this.monitorsContent.appendChild(monitorItem);
+                this.progressBars.set(id, monitorItem);
+                
+                return monitorItem;
+            }
+            
+            formatBytes(bytes) {
+                if (bytes === 0) return '0 B';
+                
+                const k = 1024;
+                const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                
+                return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+            }
+            
+            /**
+             * Settings integration methods
+             */
+            setRefreshRate(rate) {
+                if (this.reconnectInterval) {
+                    clearInterval(this.reconnectInterval);
+                }
+                
+                // Set up new interval with the specified rate
+                this.reconnectInterval = setInterval(() => {
+                    if (!this.isConnected) {
+                        this.connect();
+                    }
+                }, Math.max(rate, 100)); // Minimum 100ms
+                
+                console.log(`Refresh rate set to ${rate}ms`);
+            }
+            
+            updateMonitorVisibility(enabledMonitors) {
+                // Update visibility of monitor sections based on settings
+                Object.keys(enabledMonitors).forEach(monitorType => {
+                    const isEnabled = enabledMonitors[monitorType];
+                    
+                    // Find all monitor items for this type
+                    this.progressBars.forEach((element, id) => {
+                        if (id.includes(monitorType) || 
+                            (monitorType === 'memory' && id.includes('ram')) ||
+                            (monitorType === 'temperature' && id.includes('temp'))) {
+                            element.style.display = isEnabled ? 'block' : 'none';
+                        }
+                    });
+                });
+                
+                console.log('Monitor visibility updated:', enabledMonitors);
+            }
+            
+            getLastData() {
+                return this.lastData;
             }
             
             destroy() {
@@ -274,8 +482,29 @@
         
         // Initialize the monitor when the page loads
         let systemMonitor;
+        let settingsPanel;
+        
         document.addEventListener('DOMContentLoaded', () => {
             systemMonitor = new SystemMonitor();
+            settingsPanel = new SettingsPanel(systemMonitor);
+            
+            // Make system monitor available to settings panel
+            systemMonitor.settingsPanel = settingsPanel;
+            
+            // Listen for settings changes
+            document.addEventListener('settingsChanged', (event) => {
+                console.log('Settings changed:', event.detail);
+            });
+            
+            // Listen for monitor visibility changes
+            document.addEventListener('monitorVisibilityChanged', (event) => {
+                systemMonitor.updateMonitorVisibility(event.detail);
+            });
+            
+            // Trigger system monitor ready event for settings panel
+            setTimeout(() => {
+                document.dispatchEvent(new CustomEvent('systemMonitorReady'));
+            }, 1000);
         });
         
         // Clean up on page unload
@@ -285,5 +514,10 @@
             }
         });
     </script>
+    
+    <!-- Window Management Scripts -->
+    <script src="settings-panel.js"></script>
+    <script src="window-utils.js"></script>
+    <script src="window-controls.js"></script>
 </body>
 </html>

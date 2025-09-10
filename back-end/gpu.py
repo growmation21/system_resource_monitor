@@ -1,8 +1,21 @@
-import torch
-import comfy.model_management
-from ..core import logger
 import os
 import platform
+import logging
+
+# Setup logging
+logger = logging.getLogger(__name__)
+
+try:
+    import torch
+except ImportError:
+    torch = None
+    logger.warning("PyTorch not available")
+
+try:
+    import GPUtil
+except ImportError:
+    GPUtil = None
+    logger.warning("GPUtil not available")
 
 def is_jetson() -> bool:
     """
@@ -77,9 +90,13 @@ class CGPUInfo:
         self.anygpuLoaded = self.pynvmlLoaded or self.jtopLoaded
 
         try:
-            self.torchDevice = comfy.model_management.get_torch_device_name(comfy.model_management.get_torch_device())
+            if torch:
+                self.torchDevice = "cuda" if torch.cuda.is_available() else "cpu"
+            else:
+                self.torchDevice = "cpu"
         except Exception as e:
             logger.error('Could not pick default device. ' + str(e))
+            self.torchDevice = "cpu"
 
         if self.pynvmlLoaded and not self.jtopLoaded and not self.deviceGetCount():
             logger.warning('No GPU detected, disabling GPU monitoring.')

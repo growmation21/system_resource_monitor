@@ -1,0 +1,165 @@
+{
+  "windowManager": {
+    "version": "1.0.0",
+    "description": "System Resource Monitor - Window Management Configuration",
+    
+    "defaultSettings": {
+      "width": 300,
+      "height": 200,
+      "minWidth": 200,
+      "minHeight": 150,
+      "maxWidth": 800,
+      "maxHeight": 600,
+      "left": 100,
+      "top": 100,
+      "alwaysOnTop": true,
+      "monitor": 0,
+      "savePosition": true,
+      "saveSize": true,
+      "centerOnStart": false,
+      "rememberMonitor": true
+    },
+    
+    "constraints": {
+      "absoluteMinWidth": 150,
+      "absoluteMinHeight": 100,
+      "absoluteMaxWidth": 1920,
+      "absoluteMaxHeight": 1080,
+      "allowOutOfBounds": false,
+      "snapToEdges": true,
+      "snapDistance": 10
+    },
+    
+    "multiMonitor": {
+      "enabled": true,
+      "detectDisplayChanges": true,
+      "moveToPreferredMonitor": true,
+      "fallbackToPrimary": true,
+      "monitorNaming": {
+        "useSystemNames": true,
+        "fallbackPattern": "Monitor {index}"
+      }
+    },
+    
+    "behavior": {
+      "restoreOnRestart": true,
+      "minimizeToTray": false,
+      "closeToTray": false,
+      "showInTaskbar": true,
+      "preventOffScreen": true,
+      "autoCenter": {
+        "onMonitorChange": false,
+        "onResize": false,
+        "onFirstLaunch": false
+      }
+    },
+    
+    "shortcuts": {
+      "toggleAlwaysOnTop": "Ctrl+T",
+      "moveToNextMonitor": "Ctrl+M",
+      "resetPosition": "Ctrl+R",
+      "toggleSettings": "Ctrl+S"
+    },
+    
+    "ui": {
+      "showWindowControls": true,
+      "controlsPosition": "integrated",
+      "showMonitorInfo": true,
+      "showPositionInfo": true,
+      "compactMode": false,
+      "hideWhenMinimized": true
+    },
+    
+    "advanced": {
+      "saveInterval": 1000,
+      "positionThreshold": 5,
+      "sizeThreshold": 5,
+      "debugMode": false,
+      "logWindowEvents": false
+    }
+  },
+  
+  "presets": {
+    "compact": {
+      "width": 250,
+      "height": 150,
+      "alwaysOnTop": true,
+      "description": "Compact view for minimal screen usage"
+    },
+    
+    "standard": {
+      "width": 300,
+      "height": 200,
+      "alwaysOnTop": true,
+      "description": "Standard view with balanced information"
+    },
+    
+    "detailed": {
+      "width": 400,
+      "height": 300,
+      "alwaysOnTop": false,
+      "description": "Detailed view with all information visible"
+    },
+    
+    "sidebar": {
+      "width": 200,
+      "height": 400,
+      "alwaysOnTop": true,
+      "description": "Tall sidebar layout for edge placement"
+    }
+  },
+  
+  "monitorProfiles": {
+    "singleMonitor": {
+      "position": "topRight",
+      "offset": { "x": -20, "y": 20 },
+      "description": "Top-right corner on single monitor"
+    },
+    
+    "dualMonitorPrimary": {
+      "monitor": 0,
+      "position": "topRight",
+      "offset": { "x": -20, "y": 20 },
+      "description": "Primary monitor, top-right"
+    },
+    
+    "dualMonitorSecondary": {
+      "monitor": 1,
+      "position": "topLeft",
+      "offset": { "x": 20, "y": 20 },
+      "description": "Secondary monitor, top-left"
+    }
+  },
+  
+  "troubleshooting": {
+    "commonIssues": [
+      {
+        "issue": "Window appears off-screen",
+        "solution": "Use 'Reset Position' or restart application",
+        "prevention": "Enable 'preventOffScreen' setting"
+      },
+      {
+        "issue": "Window too small to see controls",
+        "solution": "Use keyboard shortcut Ctrl+R to reset",
+        "prevention": "Set appropriate minimum window size"
+      },
+      {
+        "issue": "Always-on-top not working",
+        "solution": "Check Chrome app permissions",
+        "prevention": "Ensure 'alwaysOnTopWindows' permission is granted"
+      },
+      {
+        "issue": "Multi-monitor detection fails",
+        "solution": "Restart Chrome app after connecting monitors",
+        "prevention": "Enable 'detectDisplayChanges' setting"
+      }
+    ],
+    
+    "diagnostics": {
+      "checkPermissions": "chrome://extensions/?id={app-id}",
+      "viewLogs": "Chrome DevTools Console",
+      "resetSettings": "Delete localStorage data",
+      "testWindowAPI": "Use Chrome App DevTools"
+    }
+  }
+}

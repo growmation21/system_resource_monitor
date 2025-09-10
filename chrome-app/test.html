@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TypeScript Module Test</title>
+</head>
+<body>
+    <div id="test-container">
+        <h1>Testing TypeScript Modules</h1>
+        <div id="status">Loading...</div>
+        <div id="results"></div>
+    </div>
+
+    <script type="module">
+        async function testModules() {
+            try {
+                console.log('Testing module imports...');
+                
+                // Test monitor module
+                const monitorModule = await import('./dist/monitor.js');
+                console.log('Monitor module loaded:', monitorModule);
+                
+                // Test monitorUI module
+                const uiModule = await import('./dist/monitorUI.js');
+                console.log('MonitorUI module loaded:', uiModule);
+                
+                // Create SystemMonitor instance
+                const { SystemMonitor } = monitorModule;
+                const monitor = new SystemMonitor('http://localhost:8888');
+                console.log('SystemMonitor created:', monitor);
+                
+                // Create MonitorUI instance
+                const { MonitorUI } = uiModule;
+                const container = document.getElementById('results');
+                const ui = new MonitorUI(container, monitor);
+                console.log('MonitorUI created:', ui);
+                
+                document.getElementById('status').textContent = 'Modules loaded successfully!';
+                
+            } catch (error) {
+                console.error('Module loading failed:', error);
+                document.getElementById('status').textContent = 'Module loading failed: ' + error.message;
+                document.getElementById('results').innerHTML = '<pre>' + error.stack + '</pre>';
+            }
+        }
+        
+        testModules();
+    </script>
+</body>
+</html>

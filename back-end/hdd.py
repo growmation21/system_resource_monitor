@@ -1,5 +1,8 @@
 import psutil
-from ..core import logger
+import logging
+
+# Setup logging
+logger = logging.getLogger(__name__)
 
 def getDrivesInfo():
   hdds = []

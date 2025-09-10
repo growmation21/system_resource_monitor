@@ -3,10 +3,12 @@ import re
 import cpuinfo
 from cpuinfo import DataSource
 import psutil
-from .gpu import CGPUInfo
-from .hdd import getDrivesInfo
+import logging
+from gpu import CGPUInfo
+from hdd import getDrivesInfo
 
-from ..core import logger
+# Setup logging
+logger = logging.getLogger(__name__)
 
 
 class CHardwareInfo:

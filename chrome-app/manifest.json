@@ -16,7 +16,8 @@
     "alwaysOnTopWindows",
     "system.cpu",
     "system.memory",
-    "system.storage"
+    "system.storage",
+    "system.display"
   ],
   
   "icons": {

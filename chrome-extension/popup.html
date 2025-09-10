@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            width: 350px;
+            padding: 16px;
+            margin: 0;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 16px;
+        }
+        
+        .title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .subtitle {
+            font-size: 12px;
+            color: #cccccc;
+        }
+        
+        .quick-stats {
+            margin-bottom: 16px;
+        }
+        
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #333;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+        }
+        
+        .stat-value {
+            font-size: 14px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        
+        .buttons {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        .btn-primary {
+            background-color: #2196F3;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #1976D2;
+        }
+        
+        .btn-secondary {
+            background-color: #666;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #555;
+        }
+        
+        .status {
+            text-align: center;
+            margin-top: 12px;
+            font-size: 12px;
+        }
+        
+        .status.connected {
+            color: #4CAF50;
+        }
+        
+        .status.disconnected {
+            color: #f44336;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #ffa500;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="title">System Resource Monitor</div>
+        <div class="subtitle">Real-time system monitoring</div>
+    </div>
+    
+    <div class="quick-stats" id="quickStats">
+        <div class="loading">Loading system data...</div>
+    </div>
+    
+    <div class="buttons">
+        <button class="btn btn-primary" id="openMonitor">Open Monitor</button>
+        <button class="btn btn-secondary" id="settings">Settings</button>
+    </div>
+    
+    <div class="status disconnected" id="status">
+        Connecting to backend...
+    </div>
+    
+    <script src="popup.js"></script>
+</body>
+</html>
