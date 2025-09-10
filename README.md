@@ -43,7 +43,7 @@ This project extracts and adapts the real-time system monitoring feature from Co
 
 ### Dependencies
 
-Install required Python packages:
+Install required Python packages globally (no virtual environment needed):
 
 ```bash
 pip install -r requirements.txt
@@ -64,10 +64,11 @@ The requirements include:
    cd system_resource_monitor
    ```
 
-2. Install dependencies:
+2. Install dependencies globally:
    ```bash
    pip install -r requirements.txt
    ```
+   *Note: No virtual environment required - the app runs with system Python*
 
 3. Run the application:
    ```bash

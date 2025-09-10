@@ -8,8 +8,7 @@ This implementation plan outlines the ordered development tasks to create a stan
 ### Phase 1: Project Foundation and Setup (1-2 days)
 
 #### Task 1.1: Environment Setup and Dependencies
-- [ ] Create Python virtual environment for the project
-- [ ] Install core dependencies from `requirements.txt`:
+- [ ] Install core dependencies globally from `requirements.txt`:
   - `psutil>=5.8.0` - System monitoring
   - `py-cpuinfo>=8.0.0` - CPU information
   - `pynvml>=11.4.1` - NVIDIA GPU monitoring
@@ -17,12 +16,15 @@ This implementation plan outlines the ordered development tasks to create a stan
   - `torch>=1.9.0` - CUDA detection (optional)
 - [ ] Set up TypeScript build environment if needed
 - [ ] Verify NVIDIA drivers and GPU detection capabilities
+- [ ] Ensure all dependencies work without virtual environment activation
 
 #### Task 1.2: Project Structure Reorganization
 - [ ] Create main application entry point (`main.py`)
 - [ ] Set up logging configuration
 - [ ] Create configuration file structure for app settings
 - [ ] Establish Chrome app manifest and launcher structure
+- [ ] Design dependency management strategy for global Python installation
+- [ ] Create installer/setup script for global dependency installation
 
 #### Task 1.3: Core Server Framework
 - [ ] Implement basic aiohttp web server
@@ -192,10 +194,11 @@ This implementation plan outlines the ordered development tasks to create a stan
 - [ ] Create extension/modification guide
 
 #### Task 8.3: Packaging and Distribution
-- [ ] Create installation package
+- [ ] Create installation package (standalone executable or installer)
+- [ ] Ensure all Python dependencies are bundled or globally installable
 - [ ] Set up Chrome Web Store entry (if applicable)
-- [ ] Create portable application version
-- [ ] Test installation on clean systems
+- [ ] Create portable application version without virtual environment dependency
+- [ ] Test installation on clean systems without Python development environments
 
 ## Risk Mitigation and Dependencies
 
@@ -209,6 +212,8 @@ This implementation plan outlines the ordered development tasks to create a stan
 2. **GPU Detection Issues** - Not all systems have NVIDIA GPUs
 3. **Performance Impact** - Continuous monitoring could affect system performance
 4. **WebSocket Stability** - Real-time communication reliability
+5. **Global Python Dependencies** - Managing dependencies without virtual environment isolation
+6. **System Python Conflicts** - Ensuring compatibility with existing system Python packages
 
 ### Recommended Alternatives
 - **Electron App** - More future-proof than Chrome Apps
@@ -222,11 +227,13 @@ This implementation plan outlines the ordered development tasks to create a stan
 
 ## Success Criteria
 1. App launches from desktop icon without virtual environment
-2. Real-time monitoring displays CPU, RAM, GPU, VRAM, and temperature
-3. Window is always-on-top, resizable, and movable across monitors
-4. Monitoring data updates every 5 seconds (configurable)
-5. CPU overhead remains under 0.5%
-6. All settings persist between app restarts
+2. All Python dependencies work with system Python installation
+3. Real-time monitoring displays CPU, RAM, GPU, VRAM, and temperature
+4. Window is always-on-top, resizable, and movable across monitors
+5. Monitoring data updates every 5 seconds (configurable)
+6. CPU overhead remains under 0.5%
+7. All settings persist between app restarts
+8. No virtual environment required for end users
 
 ## Next Steps
 1. Set up development environment and dependencies
