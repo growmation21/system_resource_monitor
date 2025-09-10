@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Resource Monitor</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+        
+        .container {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .status {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .connecting {
+            color: #ffa500;
+        }
+        
+        .connected {
+            color: #00ff00;
+        }
+        
+        .error {
+            color: #ff4444;
+        }
+        
+        .spinner {
+            border: 2px solid #333;
+            border-top: 2px solid #ffa500;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 10px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .monitor-container {
+            display: none;
+            width: 100%;
+            height: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        
+        .monitor-item {
+            margin: 5px 0;
+        }
+        
+        .monitor-label {
+            font-size: 12px;
+            margin-bottom: 2px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #333;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background-color: #0AA015;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="status" class="status connecting">
+            <div class="spinner"></div>
+            <div>Connecting to System Monitor...</div>
+        </div>
+        
+        <div id="monitors" class="monitor-container">
+            <!-- Monitor displays will be populated here -->
+        </div>
+    </div>
+
+    <script>
+        class SystemMonitor {
+            constructor() {
+                this.backendUrl = 'http://localhost:8888';
+                this.websocket = null;
+                this.statusElement = document.getElementById('status');
+                this.monitorsElement = document.getElementById('monitors');
+                this.isConnected = false;
+                
+                this.init();
+            }
+            
+            init() {
+                // Listen for backend URL from background script
+                window.addEventListener('message', (event) => {
+                    if (event.data.type === 'BACKEND_URL') {
+                        this.backendUrl = event.data.url;
+                        this.connect();
+                    }
+                });
+                
+                // Try to connect immediately
+                setTimeout(() => this.connect(), 1000);
+            }
+            
+            connect() {
+                try {
+                    const wsUrl = this.backendUrl.replace('http', 'ws') + '/ws';
+                    this.websocket = new WebSocket(wsUrl);
+                    
+                    this.websocket.onopen = () => {
+                        this.onConnected();
+                    };
+                    
+                    this.websocket.onmessage = (event) => {
+                        this.onMessage(event);
+                    };
+                    
+                    this.websocket.onclose = () => {
+                        this.onDisconnected();
+                    };
+                    
+                    this.websocket.onerror = (error) => {
+                        this.onError(error);
+                    };
+                    
+                } catch (error) {
+                    this.onError(error);
+                }
+            }
+            
+            onConnected() {
+                this.isConnected = true;
+                this.statusElement.className = 'status connected';
+                this.statusElement.innerHTML = '<div>✓ Connected to System Monitor</div>';
+                
+                // Hide status and show monitors after a brief delay
+                setTimeout(() => {
+                    this.statusElement.style.display = 'none';
+                    this.monitorsElement.style.display = 'block';
+                }, 1000);
+            }
+            
+            onDisconnected() {
+                this.isConnected = false;
+                this.statusElement.className = 'status connecting';
+                this.statusElement.innerHTML = `
+                    <div class="spinner"></div>
+                    <div>Reconnecting...</div>
+                `;
+                this.statusElement.style.display = 'block';
+                this.monitorsElement.style.display = 'none';
+                
+                // Try to reconnect
+                setTimeout(() => this.connect(), 3000);
+            }
+            
+            onError(error) {
+                this.isConnected = false;
+                this.statusElement.className = 'status error';
+                this.statusElement.innerHTML = `
+                    <div>❌ Connection Error</div>
+                    <div style="font-size: 10px;">Make sure Python backend is running</div>
+                `;
+                
+                // Try to reconnect
+                setTimeout(() => this.connect(), 5000);
+            }
+            
+            onMessage(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    this.updateMonitors(data);
+                } catch (error) {
+                    console.error('Failed to parse message:', error);
+                }
+            }
+            
+            updateMonitors(data) {
+                // This will be implemented when we receive real data
+                console.log('Received monitor data:', data);
+            }
+        }
+        
+        // Initialize the monitor when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new SystemMonitor();
+        });
+    </script>
+</body>
+</html>
