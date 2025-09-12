@@ -258,6 +258,8 @@ def main():
     parser = argparse.ArgumentParser(description="System Resource Monitor Launcher")
     parser.add_argument("--minimized", action="store_true", 
                        help="Start application minimized")
+    parser.add_argument("--hidden", action="store_true",
+                       help="Start in background mode (no console window)")
     parser.add_argument("--port", type=int, default=8888,
                        help="Backend server port (default: 8888)")
     parser.add_argument("--install", action="store_true",
@@ -280,7 +282,16 @@ def main():
         subprocess.run(cmd)
         return
     
-    # Launch application
+    # Handle hidden mode
+    if args.hidden:
+        from launch_hidden import HiddenLauncher
+        launcher = HiddenLauncher(port=args.port)
+        success = launcher.launch_hidden()
+        if not success:
+            sys.exit(1)
+        return
+    
+    # Launch application normally
     launcher = MonitorLauncher(minimized=args.minimized, port=args.port)
     success = launcher.launch()
     

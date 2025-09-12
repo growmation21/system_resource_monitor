@@ -37,6 +37,9 @@ This guide provides step-by-step instructions for installing and setting up the 
 ```powershell
 cd "C:\Program Files\SystemResourceMonitor"
 python install.py
+
+# Or create desktop shortcuts for easy launching
+python create_shortcuts.py --create
 ```
 
 **What the installer does:**
@@ -103,17 +106,38 @@ python desktop_integration.py --create-shortcuts
 # Navigate to installation directory
 cd "C:\Program Files\SystemResourceMonitor"
 
-# Start the monitoring service
+# Start the monitoring service (with console window)
 python launch_monitor.py
+
+# Start in background mode (no console window)  
+python launch_monitor.py --hidden
+
+# Or use PowerShell launcher with system tray
+powershell -ExecutionPolicy Bypass -File Start-Monitor.ps1 -SystemTray
 
 # Or specify custom port
 python launch_monitor.py --port 8888
 ```
 
-#### Method 3: System Tray
-1. Look for the System Resource Monitor icon in the system tray
-2. Right-click and select "Open Monitor"
-3. Application will launch with your saved settings
+#### Method 3: Background Mode (Recommended)
+```powershell
+# Option A: Hidden console mode
+python launch_monitor.py --hidden
+
+# Option B: System tray mode (with GUI controls)
+python system_tray_launcher.py
+
+# Option C: PowerShell launcher (auto-detects best mode)
+powershell -ExecutionPolicy Bypass -File Start-Monitor.ps1 -SystemTray
+
+# Option D: Batch file (simplest)
+start_monitor_background.bat
+```
+
+#### Method 4: System Tray
+1. Look for the System Resource Monitor icon in the system tray  
+2. Right-click for options: Start/Stop/Restart/Status
+3. Application runs completely in background
 
 ### Initial Configuration
 
@@ -179,6 +203,103 @@ const settings = {
 // Settings → Export Configuration → Save to file
 // Settings → Import Configuration → Load from file
 ```
+
+## 🔄 Background Operation
+
+### Running Without Console Window
+
+The System Resource Monitor can run completely in the background without keeping a command window open. This provides a cleaner user experience and prevents accidental closure.
+
+#### Available Background Modes
+
+**1. Hidden Console Mode** (Simple, no dependencies)
+```powershell
+python launch_monitor.py --hidden
+```
+- Runs backend server in background
+- No console window visible
+- Stop via Task Manager or system shutdown
+
+**2. System Tray Mode** (Recommended, with GUI controls)  
+```powershell
+# Install dependencies first
+pip install pystray pillow
+
+# Start system tray launcher
+python system_tray_launcher.py
+```
+- Adds icon to system tray
+- Right-click menu for Start/Stop/Restart/Status
+- Visual indicator of running state
+- Easy access to Chrome Extension setup
+
+**3. PowerShell Launcher** (Auto-configuring)
+```powershell
+powershell -ExecutionPolicy Bypass -File Start-Monitor.ps1 -SystemTray
+```
+- Automatically installs system tray dependencies
+- Falls back to hidden mode if needed  
+- Shows setup instructions
+- Clean PowerShell interface
+
+**4. Batch File** (Simplest for non-technical users)
+```batch
+start_monitor_background.bat
+```
+- Double-click to start
+- Automatically uses background mode
+- Shows brief confirmation message
+
+#### Creating Desktop Shortcuts
+
+For easy access, create desktop shortcuts for different launch modes:
+```powershell
+# Create all available shortcuts
+python create_shortcuts.py --create
+
+# This creates:
+# - System Resource Monitor.lnk (normal mode)
+# - System Resource Monitor (Background).lnk (hidden mode)
+# - System Resource Monitor (Tray).lnk (system tray mode)
+# - Start System Monitor (PowerShell).lnk (PowerShell launcher)
+```
+
+#### Managing Background Processes
+
+**To check if monitor is running:**
+```powershell
+# Check for python processes
+Get-Process -Name "python*" | Where-Object {$_.MainWindowTitle -like "*monitor*"}
+
+# Check if port is in use
+netstat -an | findstr :8888
+```
+
+**To stop background monitor:**
+```powershell
+# Stop all python processes (use with caution)
+Stop-Process -Name "python*" -Force
+
+# Or stop specific port listener
+# Use system tray right-click → Quit (recommended)
+```
+
+### System Tray Features
+
+When using system tray mode, you get these features:
+
+- **Visual Status**: Icon changes color based on server status (green=running, red=stopped)
+- **Right-Click Menu**:
+  - Start/Stop Monitor
+  - Restart Monitor  
+  - Show Status
+  - Open Chrome Extensions page
+  - View Setup Instructions
+  - Open Monitor in Browser
+  - Quit Application
+
+- **Notifications**: Windows notifications for status changes
+- **Auto-Start**: Automatically starts backend server when launched
 
 ## 🌐 Chrome Extension Integration
 
