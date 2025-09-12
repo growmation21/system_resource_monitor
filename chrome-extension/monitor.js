@@ -230,6 +230,36 @@ class SystemMonitor {
         console.log('Monitor cleanup completed');
     }
     
+    extractGpuModelName(fullName) {
+        // Extract just the model name from full GPU name
+        if (!fullName || typeof fullName !== 'string') {
+            return 'Unknown GPU';
+        }
+        
+        // Handle cases like "NVIDIA GeForce RTX 3070" -> "RTX 3070"
+        // or "NVIDIA GeForce GTX 1060" -> "GTX 1060"
+        const patterns = [
+            /NVIDIA GeForce (RTX \d+(?:\s+\w+)?)/i,    // RTX series
+            /NVIDIA GeForce (GTX \d+(?:\s+\w+)?)/i,    // GTX series
+            /NVIDIA (RTX \d+(?:\s+\w+)?)/i,            // RTX without GeForce
+            /NVIDIA (GTX \d+(?:\s+\w+)?)/i,            // GTX without GeForce
+            /AMD Radeon (RX \d+(?:\s+\w+)?)/i,         // AMD RX series
+            /(RTX \d+(?:\s+\w+)?)/i,                   // Just RTX model
+            /(GTX \d+(?:\s+\w+)?)/i,                   // Just GTX model
+            /(RX \d+(?:\s+\w+)?)/i                     // Just RX model
+        ];
+        
+        for (const pattern of patterns) {
+            const match = fullName.match(pattern);
+            if (match && match[1]) {
+                return match[1];
+            }
+        }
+        
+        // If no pattern matches, return the original name
+        return fullName;
+    }
+    
     connect() {
         if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
             return; // Already connected
@@ -375,8 +405,11 @@ class SystemMonitor {
         // GPU Monitors
         if (data.gpus && data.gpus.length > 0) {
             data.gpus.forEach((gpu, index) => {
+                // Extract just the model name from full GPU name (e.g., "NVIDIA GeForce RTX 3070" -> "RTX 3070")
+                const modelName = this.extractGpuModelName(gpu.name);
+                
                 // GPU Utilization
-                this.createProgressBar(`gpu-${index}`, `GPU ${index} (${gpu.name})`, gpu.gpu_utilization, 100, '%', this.colors.gpu);
+                this.createProgressBar(`gpu-${index}`, `GPU ${index} (${modelName})`, gpu.gpu_utilization, 100, '%', this.colors.gpu);
                 
                 // VRAM Usage
                 if (gpu.vram_total > 0) {
