@@ -25,7 +25,6 @@ class MonitorLauncher:
         self.minimized = minimized
         self.port = port
         self.backend_process = None
-        self.chrome_process = None
         self.running = True
         
     def check_dependencies(self):
@@ -93,72 +92,34 @@ class MonitorLauncher:
             return False
     
     def launch_chrome_app(self):
-        """Launch the Chrome app."""
-        print("🌐 Launching Chrome app...")
+        """Launch the Chrome extension or provide instructions."""
+        print("🌐 Chrome Extension Integration...")
         
         try:
-            chrome_app_dir = self.project_root / "chrome-app"
+            chrome_extension_dir = self.project_root / "chrome-extension"
             
-            # Try different Chrome executable names
-            chrome_commands = [
-                'google-chrome',
-                'chrome',
-                'chromium',
-                'chromium-browser',
-                r'C:\Program Files\Google\Chrome\Application\chrome.exe',
-                r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe'
-            ]
+            # Check if Chrome Extension exists
+            if not chrome_extension_dir.exists():
+                print("   ⚠️  Chrome Extension not found")
+                return False
             
-            chrome_exe = None
-            for cmd in chrome_commands:
-                try:
-                    # Test if command exists
-                    if os.path.exists(cmd):
-                        chrome_exe = cmd
-                        break
-                    else:
-                        subprocess.check_output([cmd, '--version'], 
-                                              stderr=subprocess.DEVNULL)
-                        chrome_exe = cmd
-                        break
-                except (subprocess.CalledProcessError, FileNotFoundError):
-                    continue
+            print("   📋 Chrome Extension Setup Instructions:")
+            print("      1. Open Chrome and go to chrome://extensions/")
+            print("      2. Enable 'Developer mode' (top-right toggle)")
+            print("      3. Click 'Load unpacked'")
+            print(f"      4. Select folder: {chrome_extension_dir}")
+            print("      5. Click the extension icon in Chrome toolbar")
+            print()
+            print("   💡 The extension will connect to the backend server automatically")
+            print(f"   🔗 Backend URL: http://localhost:{self.port}")
             
-            if not chrome_exe:
-                print("   ⚠️  Chrome not found. Opening in default browser...")
-                self.open_in_default_browser()
-                return True
-            
-            # Chrome app arguments
-            chrome_args = [
-                chrome_exe,
-                f'--app=file:///{chrome_app_dir}/window.html',
-                '--disable-web-security',
-                '--allow-file-access-from-files',
-                '--disable-features=VizDisplayCompositor',
-                '--no-first-run',
-                '--no-default-browser-check'
-            ]
-            
-            if self.minimized:
-                chrome_args.append('--start-minimized')
-            
-            # Start Chrome app
-            self.chrome_process = subprocess.Popen(
-                chrome_args,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
-            )
-            
-            print(f"   ✅ Chrome app launched")
+            # Don't try to launch Chrome automatically - let user handle the extension
+            # This prevents the premature shutdown issue
             return True
             
         except Exception as e:
-            print(f"   ❌ Failed to launch Chrome app: {e}")
-            print("   ⚠️  Falling back to default browser...")
-            self.open_in_default_browser()
-            return True
+            print(f"   ❌ Chrome Extension setup failed: {e}")
+            return False
     
     def open_in_default_browser(self):
         """Open the app in the default web browser."""
@@ -184,7 +145,13 @@ class MonitorLauncher:
         signal.signal(signal.SIGTERM, signal_handler)
     
     def monitor_processes(self):
-        """Monitor backend and Chrome processes."""
+        """Monitor backend server and provide status updates."""
+        status_interval = 30  # Show status every 30 seconds
+        last_status_time = time.time()
+        
+        print("🔍 Monitoring backend server...")
+        print("   💡 Press Ctrl+C to stop the server")
+        
         while self.running:
             try:
                 # Check backend process
@@ -192,12 +159,12 @@ class MonitorLauncher:
                     print("⚠️  Backend server stopped unexpectedly")
                     self.restart_backend()
                 
-                # Check Chrome process
-                if self.chrome_process and self.chrome_process.poll() is not None:
-                    print("ℹ️  Chrome app closed")
-                    if not self.minimized:  # Don't auto-restart if started minimized
-                        self.shutdown()
-                        break
+                # Show periodic status updates
+                current_time = time.time()
+                if current_time - last_status_time >= status_interval:
+                    print(f"   🟢 Backend server running on port {self.port}")
+                    print("   🌐 Chrome Extension can connect at any time")
+                    last_status_time = current_time
                 
                 time.sleep(5)  # Check every 5 seconds
                 
@@ -223,18 +190,6 @@ class MonitorLauncher:
         """Shutdown all processes gracefully."""
         print("🛑 Shutting down System Resource Monitor...")
         self.running = False
-        
-        # Stop Chrome process
-        if self.chrome_process:
-            try:
-                self.chrome_process.terminate()
-                self.chrome_process.wait(timeout=5)
-                print("   ✅ Chrome app stopped")
-            except subprocess.TimeoutExpired:
-                self.chrome_process.kill()
-                print("   ⚠️  Chrome app forcibly killed")
-            except Exception as e:
-                print(f"   ⚠️  Error stopping Chrome: {e}")
         
         # Stop backend process
         if self.backend_process:
