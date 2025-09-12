@@ -197,34 +197,73 @@ def create_launcher():
         return True
 
 def create_windows_shortcut():
-    """Create Windows desktop shortcut"""
+    """Create Windows desktop shortcuts"""
     try:
         import winshell
         from win32com.client import Dispatch
         
         desktop = winshell.desktop()
-        shortcut_path = os.path.join(desktop, "System Resource Monitor.lnk")
-        
+        project_root = Path(__file__).parent
         python_exe = get_python_executable()
-        main_script = Path(__file__).parent / "main.py"
+        pythonw_exe = python_exe.replace("python.exe", "pythonw.exe")
         
+        shortcuts_created = []
+        
+        # Shortcut 1: Normal launcher (with console)
+        shortcut_path = os.path.join(desktop, "System Resource Monitor.lnk")
         shell = Dispatch('WScript.Shell')
         shortcut = shell.CreateShortCut(shortcut_path)
         shortcut.Targetpath = python_exe
-        shortcut.Arguments = f'"{main_script}"'
-        shortcut.WorkingDirectory = str(Path(__file__).parent)
+        shortcut.Arguments = f'"{project_root}/launch_monitor.py"'
+        shortcut.WorkingDirectory = str(project_root)
+        shortcut.Description = "System Resource Monitor - Normal Mode"
         shortcut.IconLocation = python_exe
         shortcut.save()
+        shortcuts_created.append("System Resource Monitor.lnk")
         
-        print(f"✅ Desktop shortcut created: {shortcut_path}")
+        # Shortcut 2: Background launcher (no console)
+        shortcut_path = os.path.join(desktop, "System Resource Monitor (Background).lnk")
+        shortcut = shell.CreateShortCut(shortcut_path)
+        shortcut.Targetpath = pythonw_exe
+        shortcut.Arguments = f'"{project_root}/launch_monitor.py" --hidden'
+        shortcut.WorkingDirectory = str(project_root)
+        shortcut.Description = "System Resource Monitor - Background Mode (No Console)"
+        shortcut.IconLocation = python_exe
+        shortcut.save()
+        shortcuts_created.append("System Resource Monitor (Background).lnk")
+        
+        # Shortcut 3: System Tray launcher (if dependencies available)
+        try:
+            import pystray
+            from PIL import Image
+            
+            shortcut_path = os.path.join(desktop, "System Resource Monitor (Tray).lnk")
+            shortcut = shell.CreateShortCut(shortcut_path)
+            shortcut.Targetpath = pythonw_exe
+            shortcut.Arguments = f'"{project_root}/system_tray_launcher.py"'
+            shortcut.WorkingDirectory = str(project_root)
+            shortcut.Description = "System Resource Monitor - System Tray Mode"
+            shortcut.IconLocation = python_exe
+            shortcut.save()
+            shortcuts_created.append("System Resource Monitor (Tray).lnk")
+            
+        except ImportError:
+            print("   ℹ️  System tray dependencies not available, skipping tray shortcut")
+        
+        print(f"✅ Desktop shortcuts created:")
+        for shortcut in shortcuts_created:
+            print(f"   • {shortcut}")
+        
         return True
         
     except ImportError:
         print("⚠️  pywin32 not available, skipping Windows shortcut creation")
-        print("   You can manually create a shortcut to main.py")
+        print("   Install with: pip install pywin32")
+        print("   Or use: python create_shortcuts.py --create")
         return True
     except Exception as e:
-        print(f"⚠️  Failed to create Windows shortcut: {e}")
+        print(f"⚠️  Failed to create Windows shortcuts: {e}")
+        print(f"   Alternative: python create_shortcuts.py --create")
         return True
 
 def create_linux_desktop_entry():
@@ -275,8 +314,15 @@ def main():
     print("\n" + "=" * 50)
     print("🎉 Installation completed successfully!")
     print("\nTo start the System Resource Monitor:")
-    print(f"   python {Path(__file__).parent / 'main.py'}")
-    print("\nOr use the desktop shortcut if created.")
+    print(f"   Normal mode:     python {Path(__file__).parent / 'launch_monitor.py'}")
+    print(f"   Background mode: python {Path(__file__).parent / 'launch_monitor.py'} --hidden")
+    print(f"   System tray:     python {Path(__file__).parent / 'system_tray_launcher.py'}")
+    print("\nOr use the desktop shortcuts that were created.")
+    print("\nChrome Extension Setup:")
+    print("   1. Open Chrome → chrome://extensions/")
+    print("   2. Enable 'Developer mode'")
+    print("   3. Click 'Load unpacked'") 
+    print(f"   4. Select: {Path(__file__).parent / 'chrome-extension'}")
     
     return 0
 

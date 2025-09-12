@@ -11,3 +11,11 @@ torch>=1.9.0
 # Web framework dependencies
 aiohttp>=3.8.0
 aiohttp-cors>=0.7.0
+
+# Desktop integration (Windows)
+winshell>=0.6
+pywin32>=306
+
+# System tray interface (optional)
+pystray>=0.19.0
+pillow>=10.0.0
